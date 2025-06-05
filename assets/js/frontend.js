@@ -1,5 +1,10 @@
 document.addEventListener('DOMContentLoaded', function() {
     const initCarousel = (carousel) => {
+        if (!carousel) {
+            console.error('Invalid carousel element provided');
+            return;
+        }
+
         // Remove any conflicting classes first
         carousel.classList.remove('cg-carousel-mode');
         
@@ -16,13 +21,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const container = carousel.querySelector('.oc-carousel-container');
         if (!container) {
-            console.error('Carousel container not found');
+            console.error('Carousel container not found in element:', carousel);
             return;
         }
 
-        const slides = Array.from(carousel.querySelectorAll('.oc-slide'));
+        const slides = Array.from(container.querySelectorAll('.oc-slide'));
         if (slides.length === 0) {
-            console.error('No slides found in carousel');
+            console.error('No slides found in carousel container');
             return;
         }
 
@@ -290,31 +295,45 @@ document.addEventListener('DOMContentLoaded', function() {
 
         preloadImages();
         carousel.addEventListener('slideChange', preloadImages);
+
+        // Mark as initialized
+        carousel.classList.add('initialized');
     };
 
-   // Initialize all carousels
+    // Initialize all carousels
     window.initCarousel = initCarousel; // Make it globally available
 
-    const carousels = document.querySelectorAll('.oc-carousel-wrapper:not(.initialized)');
-    if ('requestIdleCallback' in window) {
-        carousels.forEach(carousel => {
-            requestIdleCallback(() => {
-                try {
-                    initCarousel(carousel);
-                    carousel.classList.add('initialized');
-                } catch (error) {
-                    console.error('Failed to initialize carousel:', error);
-                }
-            });
-        });
-    } else {
+    // Use a more robust selector and add error handling
+    const initializeCarousels = () => {
+        const carousels = document.querySelectorAll('.oc-carousel-wrapper:not(.initialized)');
+        if (carousels.length === 0) {
+            console.log('No uninitialized carousels found on the page');
+            return;
+        }
+
         carousels.forEach(carousel => {
             try {
                 initCarousel(carousel);
-                carousel.classList.add('initialized');
             } catch (error) {
                 console.error('Failed to initialize carousel:', error);
             }
         });
-    }
+    };
+
+    // Initialize on DOMContentLoaded and after any dynamic content updates
+    initializeCarousels();
+
+    /// Optional: Re-run initialization when new content might be added
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.addedNodes.length > 0) {
+                initializeCarousels();
+            }
+        });
+    });
+
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
 });
